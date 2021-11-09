@@ -153,7 +153,7 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-  // 本题要求返回最小的数的补码。
+  // 本题要求返回最小的数的补码。即符号位为1，其他位皆为0。
   return 1 << 31;
 
 }
@@ -166,7 +166,7 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  // 使用 !! 将数值转化为逻辑表达式，即二进制全0或全1。
+  // 使用 !! 将数值转化为逻辑表达式。
   return !(~((x + 1) ^ x)) & !!(x + 1);
 }
 /* 
