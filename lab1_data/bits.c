@@ -155,7 +155,6 @@ int bitXor(int x, int y) {
 int tmin(void) {
   // 本题要求返回最小的数的补码。即符号位为1，其他位皆为0。
   return 1 << 31;
-
 }
 //2
 /*
@@ -306,7 +305,7 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  // 取出符号位
+  // 取出符号位，>> 为算术移位，需要和 0x1 想与才能得出结果
   unsigned sign = (uf >> 31) & 0x1;
   // 取出e，8位
   unsigned exp = (uf & 0x7FFFFFFF) >> 23;
@@ -317,7 +316,7 @@ unsigned floatScale2(unsigned uf) {
     return uf;
   } else if (exp == 0) {
     frac <<= 1;
-    rst = (sign << 31) | (exp << 23) | frac;
+    rst = (sign << 31) | frac;
   } else {
     ++exp;
     rst = (sign << 31) | (exp << 23) | frac;
@@ -343,15 +342,20 @@ int floatFloat2Int(unsigned uf) {
   unsigned frac = uf & 0x7FFFFF;
   int E = exp - 127;
   if (E < 0) {
+    // 值小于1，包含非规格数
     return 0;
   } else if (E >= 31) {
+    // 值大于int型的最大值
     return 0x80000000u;
   } else {
+    // 加上省去的1
     frac = frac | 1 << 23;
 
     if (E < 23) {
+      // 指数较小，需要舍去部分尾数
       frac >>= (23 - E);
     } else {
+      // 指数较大，可以包含全部位数
       frac <<= (E - 23);
     }
 
@@ -380,13 +384,13 @@ int floatFloat2Int(unsigned uf) {
 unsigned floatPower2(int x) {
   if (x > 127) {
     return 0xFF << 23;
-  } else if (x < -148) {
+  } else if (x < -149) {
     return 0;
   } else if (x > -126) {
     int exp = x + 127;
     return (exp << 23);
   } else {
-    int t = 148 + x;
+    int t = 149 + x;
     return (1 << t);
   }
   return 2;
