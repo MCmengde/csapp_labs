@@ -132,7 +132,100 @@ phase_2的汇编代码解析如下：
 
 在gdb调试时，可以使用以下命令查看栈中的输入整数：
 ```shell
-x/6wd $rsp
+(gdb) x/6wd $rsp
 0x7fffffffdcb0: 1   2   4   8
 0x7fffffffdcc0: 16  32
+```
+
+## bomb 3
+
+phase_3代码解析如下：
+
+```assembly
+0000000000400f43 <phase_3>:
+  400f43:	48 83 ec 18          	sub    $0x18,%rsp
+  ; 设置参数，rdx用于保存第三个参数，rcx用于保存第四个参数
+  400f47:	48 8d 4c 24 0c       	lea    0xc(%rsp),%rcx
+  400f4c:	48 8d 54 24 08       	lea    0x8(%rsp),%rdx
+  ; rdi中保存输入字符串的地址，即phase_3的入参
+  ; 将地址0x4025cf作为第二个参数，保存在rsi中
+  ; 使用'x/s 0x4025cf'查看，该地址保存着字符串"%d %d"
+  400f51:	be cf 25 40 00       	mov    $0x4025cf,%esi
+  ; 将rax置零，用于保存返回值
+  400f56:	b8 00 00 00 00       	mov    $0x0,%eax
+  ; 调用sscanf，读取从输入的字符串读入两个整数
+  ; 依次保存在 $rsp+0x8 与 $rsp+0xc 存储的地址中
+  400f5b:	e8 90 fc ff ff       	callq  400bf0 <__isoc99_sscanf@plt>
+
+  ; 检查sscanf的返回值(即读入的参数个数)是否大于1，否则爆炸
+  400f60:	83 f8 01             	cmp    $0x1,%eax
+  400f63:	7f 05                	jg     400f6a <phase_3+0x27>
+  400f65:	e8 d0 04 00 00       	callq  40143a <explode_bomb>
+
+  ; ja -> jump above
+  ; 将读入的第一个数与7比大小，大于7跳转(<=7不跳转), 跳转目标地址爆炸，故第一个数不能大于7
+  400f6a:	83 7c 24 08 07       	cmpl   $0x7,0x8(%rsp)
+  400f6f:	77 3c                	ja     400fad <phase_3+0x6a>
+
+  ; 将第一个数放入rax中
+  400f71:	8b 44 24 08          	mov    0x8(%rsp),%eax
+  ; `jmpq` 表示跳转到绝对地址, *(0x402470 + 8 * $rax)，
+  ; 使用`x/x 0x402470 + 8 * 第一个数`查看跳转的地址
+  400f75:	ff 24 c5 70 24 40 00 	jmpq   *0x402470(,%rax,8)
+
+  ; 第一个数与跳转地址的对应关系如下
+  ; 以下每个跳转地址，都将比较第二个数与一个立即数，不匹配则爆炸
+  ; 0; 0xcf = 207
+  400f7c:	b8 cf 00 00 00       	mov    $0xcf,%eax
+  400f81:	eb 3b                	jmp    400fbe <phase_3+0x7b>
+  ; 2; 0x2c3 = 707
+  400f83:	b8 c3 02 00 00       	mov    $0x2c3,%eax
+  400f88:	eb 34                	jmp    400fbe <phase_3+0x7b>
+  ; 3; 0x100 = 256
+  400f8a:	b8 00 01 00 00       	mov    $0x100,%eax
+  400f8f:	eb 2d                	jmp    400fbe <phase_3+0x7b>
+  ; 4; 0x185 = 389
+  400f91:	b8 85 01 00 00       	mov    $0x185,%eax
+  400f96:	eb 26                	jmp    400fbe <phase_3+0x7b>
+  ; 5; 0xce = 206
+  400f98:	b8 ce 00 00 00       	mov    $0xce,%eax
+  400f9d:	eb 1f                	jmp    400fbe <phase_3+0x7b>
+  ; 6; 0x2aa = 682
+  400f9f:	b8 aa 02 00 00       	mov    $0x2aa,%eax
+  400fa4:	eb 18                	jmp    400fbe <phase_3+0x7b>
+  ; 7; 0x147 = 327
+  400fa6:	b8 47 01 00 00       	mov    $0x147,%eax
+  400fab:	eb 11                	jmp    400fbe <phase_3+0x7b>
+  400fad:	e8 88 04 00 00       	callq  40143a <explode_bomb>
+
+  ; 没找个怎样跳转到这个地址
+  400fb2:	b8 00 00 00 00       	mov    $0x0,%eax
+  400fb7:	eb 05                	jmp    400fbe <phase_3+0x7b>
+  ; 1; 0x137 = 311
+  400fb9:	b8 37 01 00 00       	mov    $0x137,%eax
+  400fbe:	3b 44 24 0c          	cmp    0xc(%rsp),%eax
+  400fc2:	74 05                	je     400fc9 <phase_3+0x86>
+  400fc4:	e8 71 04 00 00       	callq  40143a <explode_bomb>
+  400fc9:	48 83 c4 18          	add    $0x18,%rsp
+  400fcd:	c3                   	retq 
+```
+
+可以使用以下命令查看`0x400f5b`处调用`sscanf`读入到栈中的两个整数：
+
+```shell
+(gdb) x/2wd $rsp+0x8
+0x7fffffffdd08: 7   327
+```
+
+故本题有八种答案：
+
+```text
+0 207
+1 311
+2 707
+3 256
+4 389
+5 206
+6 628
+7 327
 ```
